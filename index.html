@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta charset="utf-8" />
+    <title>Misadosapp</title>
+    <style>
+
+      * {
+        direction: rtl;
+      }
+
+      #map {
+        height: 400px;
+        width: 700px;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #description {
+        font-family: Roboto;
+        font-size: 15px;
+        font-weight: 300;
+      }
+
+      #infowindow-content .title {
+        font-weight: bold;
+      }
+
+      #infowindow-content {
+        display: none;
+      }
+
+      #map #infowindow-content {
+        display: inline;
+      }
+
+      .pac-card {
+        margin: 10px 10px 0 0;
+        border-radius: 2px 0 0 2px;
+        box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        outline: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        background-color: #fff;
+        font-family: Roboto;
+      }
+
+      #pac-container {
+        padding-bottom: 12px;
+        margin-right: 12px;
+      }
+
+      .pac-controls {
+        display: inline-block;
+        padding: 5px 11px;
+      }
+
+      .pac-controls label {
+        font-family: Roboto;
+        font-size: 13px;
+        font-weight: 300;
+      }
+
+      #pac-input {
+        background-color: #fff;
+        font-family: Roboto;
+        font-size: 15px;
+        font-weight: 300;
+        margin-left: 12px;
+        padding: 0 11px 0 13px;
+        text-overflow: ellipsis;
+        width: 400px;
+      }
+
+      #pac-input:focus {
+        border-color: #4d90fe;
+      }
+
+      #title {
+        color: #fff;
+        background-color: #4d90fe;
+        font-size: 25px;
+        font-weight: 500;
+        padding: 6px 12px;
+      }
+      #target {
+        width: 345px;
+      }
+
+    </style>
+  </head>
+  <body>
+    <input
+      id="pac-input"
+      class="controls"
+      type="text"
+      placeholder="Search Box"
+    />
+    <div id="map"></div>
+    <div class="selected-place-info">
+      <h4>שם המסעדה: <span id="place-name"></span></h4>
+      <p>כתובת: <span id="place-address"></span></p>
+      <p>מספר טלפון: <span id="place-phone"></span></p>
+      <p>שעות פתיחה: <span id="place-hours"></span></p>
+      <div id="place-imgs"></div>
+      <p><strong>מיקום:</stong>
+        <p>lng: <span id="place-lng"></span></p>
+        <p>lat: <span id="place-lat"></span></p>
+      </p>
+    </div>
+    <script>
+
+      var infowindow;
+      var placeSelected;
+      function setPlaceToDom() {
+        // debugger;
+        document.querySelector("#place-name").innerText = placeSelected.name;
+        document.querySelector("#place-address").innerText = placeSelected.formatted_address;
+        document.querySelector("#place-phone").innerText = placeSelected.formatted_phone_number;
+        document.querySelector("#place-hours").innerText = placeSelected.opening_hours.weekday_text;
+        if (placeSelected.geometry.viewport) {
+              document.querySelector("#place-lng").innerText = placeSelected.geometry.viewport.ga.l;
+              document.querySelector("#place-lat").innerText = placeSelected.geometry.viewport.ga.j;
+            } else {
+              document.querySelector("#place-lng").innerText = placeSelected.geometry.location.ga.l;
+              document.querySelector("#place-lat").innerText = placeSelected.geometry.location.ga.j;
+            }
+        document.querySelector("#place-imgs").innerHTML = "";
+        placeSelected.photos.forEach(photo =>(document.querySelector("#place-imgs").innerHTML += ` <img style="width:150px" src="${photo.getUrl()}">`));
+      }
+      function initAutocomplete() {
+        var map = new google.maps.Map(document.getElementById("map"), {
+          center: { lat: 32.0853, lng: 34.7818 },
+          zoom: 13,
+          mapTypeId: "roadmap"
+        });
+
+        var input = document.getElementById("pac-input");
+        var searchBox = new google.maps.places.SearchBox(input);
+        map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+        map.addListener("bounds_changed", function() {
+          searchBox.setBounds(map.getBounds());
+        });
+
+        var markers = [];
+        searchBox.addListener("places_changed", function() {
+          var places = searchBox.getPlaces();
+          console.log("place details:", places);
+          placeSelected = places[0];
+          setPlaceToDom();
+          if (places.length == 0) {
+            return;
+          }
+
+          markers.forEach(function(marker) {
+            marker.setMap(null);
+          });
+          markers = [];
+
+          var bounds = new google.maps.LatLngBounds();
+          places.forEach(function(place) {
+            if (!place.geometry) {
+              console.log("Returned place contains no geometry");
+              return;
+            }
+            var icon = {
+              url: place.icon,
+              size: new google.maps.Size(71, 71),
+              origin: new google.maps.Point(0, 0),
+              anchor: new google.maps.Point(17, 34),
+              scaledSize: new google.maps.Size(25, 25)
+            };
+
+            markers.push(
+              new google.maps.Marker({
+                map: map,
+                icon: icon,
+                title: place.name,
+                position: place.geometry.location
+              })
+            );
+
+            if (place.geometry.viewport) {
+              bounds.union(place.geometry.viewport);
+            } else {
+              bounds.extend(place.geometry.location);
+            }
+          });
+          map.fitBounds(bounds);
+        });
+      }
+    </script>
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDAJmylbPc8pzaPeLp2lh9_KZuOBmxsQJQ&libraries=places&callback=initAutocomplete"
+      async defer></script>
+  </body>
+</html>
